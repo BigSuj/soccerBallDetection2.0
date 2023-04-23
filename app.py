@@ -2,13 +2,30 @@ from flask import Flask, request, render_template
 import numpy as np
 from PIL import Image
 import onnxruntime as ort
+from azure.storage.blob import BlobServiceClient
+import tempfile
 
 
 app = Flask(__name__)
 
 # Load the trained model and class names
+def load_model_from_azure_blob_storage(connection_string, container_name, blob_name):
+    blob_service_client = BlobServiceClient.from_connection_string(connection_string)
+    container_client = blob_service_client.get_container_client(container_name)
+    blob_client = container_client.get_blob_client(blob_name)
 
-sess = ort.InferenceSession("model.onnx")
+    with tempfile.NamedTemporaryFile() as tmp:
+        with open(tmp.name, "wb") as model_file:
+            model_file.write(blob_client.download_blob().readall())
+        sess = ort.InferenceSession(tmp.name)
+
+    return sess
+
+connection_string = 'DefaultEndpointsProtocol=https;AccountName=sujmlmodels;AccountKey=GzBwpiN+3m2nMiKdMrMJrZ8E3g+S+H1c/EkkUuEO4Dm+rgWdsuUhjedntgAl7XgWyuTaF8VNozHa+AStfIKtmg==;EndpointSuffix=core.windows.net'
+container_name = 'moodels'
+blob_name = 'model.onnx'
+
+sess = load_model_from_azure_blob_storage(connection_string, container_name, blob_name)
 input_name = sess.get_inputs()[0].name
 output_name = sess.get_outputs()[0].name
 class_names = ['Not a soccer ball', 'soccer ball']  # list of class names
