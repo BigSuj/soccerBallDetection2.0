@@ -1,9 +1,11 @@
 from flask import Flask, request, render_template
 import numpy as np
-from PIL import Image
 import onnxruntime as ort
 from azure.storage.blob import BlobServiceClient
 import tempfile
+from PIL import Image
+import azure_blob as ab
+
 
 
 app = Flask(__name__)
@@ -33,6 +35,7 @@ class_names = ['Not a soccer ball', 'soccer ball']  # list of class names
 # Define a function to preprocess the image
 def preprocess_image(image):
     # Resize the image to match the input shape of the model
+    image = Image.open(image)
     image = image.resize((224, 224))
     image = image.convert('RGB')
     
@@ -40,18 +43,17 @@ def preprocess_image(image):
     x = np.array(image, dtype=np.float32) / 255.0
     x = np.expand_dims(x, axis=0)
     
-    
     return x
 
 @app.route('/', methods=['GET', 'POST'])
 def predict_image():
     if request.method == 'POST':
         # Get the uploaded file from the form
+        global file
         file = request.files['image']
         
         # Load the image and preprocess it
-        img = Image.open(file)
-        x = preprocess_image(img)
+        x = preprocess_image(file)
         
         # Make a prediction using the model
         y = sess.run([output_name], {input_name: x})
@@ -61,7 +63,23 @@ def predict_image():
         # Render the results page with the predicted class label
         return render_template('results.html', class_label=class_label)
     else:
-        # Render the form page to upload an imag
+        # Render the form page to upload an image
         return render_template('form.html')
+
+@app.route('/answer', methods=['POST'])
+def answer():
+    # Get the predicted label and the actual label from the form data
+    predicted_label = request.form['predicted_label']
+    actual_label = request.form['actual_label']
+
+    label = 0
+    if actual_label == 'Soccer Ball':
+        label = 1
+    ab.upload_image(file, label)
+
+    # Render the results page with the predicted label and the "Thank you" message
+    return render_template('results.html', class_label=predicted_label, submitted=True)
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)

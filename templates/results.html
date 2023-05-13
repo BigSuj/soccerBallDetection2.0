@@ -10,6 +10,17 @@
   <div class="result">
     <h1>Predicted class:</h1>
     <p>{{ class_label }}</p>
+    {% if not submitted %}
+    <h2>What is the actual label for the image?</h2>
+    <form action="/answer" method="post">
+      <input type="hidden" name="predicted_label" value="{{ class_label }}">
+      <input type="submit" name="actual_label" value="Soccer ball">
+      <input type="submit" name="actual_label" value="Not soccer ball">
+    </form>
+    {% else %}
+    <h1>Thank you for submitting your label!</h1>
+    {% endif %}
+  </div>
   </div>
 </body>
 </html>

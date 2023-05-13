@@ -1,5 +1,5 @@
-Flask==2.2.3
+Flask==2.0.2
 numpy==1.21.4
-Pillow==9.5.0
+imageio
 azure-storage-blob
 onnxruntime
